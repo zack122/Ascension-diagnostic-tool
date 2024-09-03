@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Filter</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h1>Upload and Filter</h1>
+            <form method="POST" enctype="multipart/form-data">
+                <label for="file">Choose a file:</label>
+                <input type="file" name="file" id="file" accept=".txt" required>
+                
+                <label>Choose filters:</label><br>
+                <input type="checkbox" name="filter" value="all" id="filter-all">
+                <label for="filter-all">All Lines</label><br>
+                <input type="checkbox" name="filter" value="system" id="filter-system">
+                <label for="filter-system">System Logs</label><br>
+                <input type="checkbox" name="filter" value="data" id="filter-data">
+                <label for="filter-data">Data Logs</label><br>
+                <input type="checkbox" name="filter" value="debug" id="filter-debug">
+                <label for="filter-debug">Debug Logs</label><br>
+                <input type="checkbox" name="filter" value="notification" id="filter-notification">
+                <label for="filter-notification">Notification Logs</label><br>
+                
+                <button type="submit">Upload and Filter</button>
+            </form>
+        </div>
+        
+        <div class="content">
+            {% if filtered_lines %}
+            <h2>Filtered Content (with Line Numbers):</h2>
+            <div class="output">
+                <ul>
+                {% for line_number, line_content in filtered_lines %}
+                    <li><strong>{{ line_number }}:</strong> {{ line_content }}</li>
+                {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
