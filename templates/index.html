@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <div class="sidebar">
-            <h1>Upload and Filter</h1>
+            <h1>Ascension diagnostic tool for log files</h1>
             <form method="POST" enctype="multipart/form-data">
                 <label for="file">Choose a file:</label>
                 <input type="file" name="file" id="file" accept=".txt" required>
@@ -32,7 +32,7 @@
         
         <div class="content">
             {% if filtered_lines %}
-            <h2>Filtered Content (with Line Numbers):</h2>
+            <h2>Filtered Content:</h2>
             <div class="output">
                 <ul>
                 {% for line_number, line_content in filtered_lines %}
