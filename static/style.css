@@ -4,7 +4,7 @@ body, h1, h2, p, ul, li, form {
 }
 
 body {
-    font-family: Arial, sans-serif;
+    font-family: Helvetica, sans-serif;
     display: flex;
     height: 100vh;
     overflow: hidden;
@@ -22,14 +22,16 @@ body {
     background-color: #f8f9fa;
     border-right: 1px solid #ddd;
     box-sizing: border-box;
-    overflow-y: auto;
+    overflow-y: auto;  /* Enables scrolling for the sidebar */
+    max-height: 100vh;  /* Ensures sidebar height doesn't exceed viewport */
 }
 
 .content {
     flex-grow: 1;
     padding: 20px;
-    overflow-y: auto;
+    overflow-y: auto;  /* Enables scrolling for the content area */
     box-sizing: border-box;
+    white-space: nowrap;
 }
 
 h1, h2 {
@@ -55,8 +57,8 @@ ul {
 }
 
 .output {
-    max-height: calc(100vh - 40px);
-    overflow-y: auto;
+    max-height: calc(100vh - 40px);  /* Ensures output area height is responsive */
+    overflow-y: auto;  /* Enables scrolling for output area */
     padding-right: 10px;
 }
 

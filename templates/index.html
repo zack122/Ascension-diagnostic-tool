@@ -11,34 +11,77 @@
         <div class="sidebar">
             <h1>Ascension diagnostic tool for log files</h1>
             <form method="POST" enctype="multipart/form-data">
-                <label for="file">Choose a file:</label>
-                <input type="file" name="file" id="file" accept=".txt" required>
+                <label for="file">Choose a file (optional if already uploaded):</label>
+                <input type="file" name="file" id="file" accept=".txt">
                 
                 <label>Choose filters:</label><br>
-                <input type="checkbox" name="filter" value="all" id="filter-all">
+                
+                <!-- 'All Lines' checkbox -->
+                <input type="checkbox" name="filter" value="all" id="filter-all"
+                {% if 'all' in selected_filters %}checked{% endif %}>
                 <label for="filter-all">All Lines</label><br>
-                <input type="checkbox" name="filter" value="system" id="filter-system">
+                
+                <!-- 'System Logs' checkbox -->
+                <input type="checkbox" name="filter" value="system" id="filter-system"
+                {% if 'system' in selected_filters %}checked{% endif %}>
                 <label for="filter-system">System Logs</label><br>
-                <input type="checkbox" name="filter" value="data" id="filter-data">
+                
+                <!-- 'Data Logs' checkbox -->
+                <input type="checkbox" name="filter" value="data" id="filter-data"
+                {% if 'data' in selected_filters %}checked{% endif %}>
                 <label for="filter-data">Data Logs</label><br>
-                <input type="checkbox" name="filter" value="debug" id="filter-debug">
+                
+                <!-- 'Debug Logs' checkbox -->
+                <input type="checkbox" name="filter" value="debug" id="filter-debug"
+                {% if 'debug' in selected_filters %}checked{% endif %}>
                 <label for="filter-debug">Debug Logs</label><br>
-                <input type="checkbox" name="filter" value="notification" id="filter-notification">
+                
+                <!-- 'Notification Logs' checkbox -->
+                <input type="checkbox" name="filter" value="notification" id="filter-notification"
+                {% if 'notification' in selected_filters %}checked{% endif %}>
                 <label for="filter-notification">Notification Logs</label><br>
                 
-                <button type="submit">Upload and Filter</button>
+                <!-- 'Warning Logs' checkbox -->
+                <input type="checkbox" name="filter" value="warning" id="filter-warning"
+                {% if 'warning' in selected_filters %}checked{% endif %}>
+                <label for="filter-warning">Warning Logs</label><br>
+
+                <!-- 'Error Logs' checkbox -->
+                <input type="checkbox" name="filter" value="error" id="filter-error"
+                {% if 'error' in selected_filters %}checked{% endif %}>
+                <label for="filter-error">Error Logs</label><br>
+
+                <!-- 'Kernel Logs' checkbox -->
+                <input type="checkbox" name="filter" value="kernel" id="filter-kernel"
+                {% if 'kernel' in selected_filters %}checked{% endif %}>
+                <label for="filter-kernel">Kernel Logs</label><br>
+
+                <!-- 'Tx Logs' checkbox -->
+                <input type="checkbox" name="filter" value="tx" id="filter-tx"
+                {% if 'tx' in selected_filters %}checked{% endif %}>
+                <label for="filter-tx">Tx Logs</label><br>
+
+                <!-- 'Rx Logs' checkbox -->
+                <input type="checkbox" name="filter" value="rx" id="filter-rx"
+                {% if 'rx' in selected_filters %}checked{% endif %}>
+                <label for="filter-rx">Rx Logs</label><br>
+
+                <!-- Date filter fields -->
+                <label for="start_date">Start Date:</label>
+                <input type="date" name="start_date" id="start_date" value="{{ start_date }}"><br>
+
+                <label for="end_date">End Date:</label>
+                <input type="date" name="end_date" id="end_date" value="{{ end_date }}"><br>
+
+                <button type="submit">Apply Filters</button>
             </form>
         </div>
         
         <div class="content">
-            {% if filtered_lines %}
+            {% if filtered_df %}
             <h2>Filtered Content:</h2>
             <div class="output">
-                <ul>
-                {% for line_number, line_content in filtered_lines %}
-                    <li><strong>{{ line_number }}:</strong> {{ line_content }}</li>
-                {% endfor %}
-                </ul>
+                {{ filtered_df | safe }}
             </div>
             {% endif %}
         </div>
