@@ -1,8 +1,9 @@
 import os
 import pandas as pd
-from flask import Flask, request, render_template, redirect, session
+from flask import Flask, request, render_template, redirect, session, url_for
 from werkzeug.utils import secure_filename
 from datetime import datetime
+
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -18,6 +19,8 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 
 # Define the allowed file extensions for uploads (only .txt files are allowed)
 app.config['ALLOWED_EXTENSIONS'] = {'txt'}
+
+PER_PAGE = 1000  # Set the number of rows per page
 
 
 def allowed_file(filename):
@@ -40,14 +43,6 @@ def filter_content(lines, filters):
     return filtered_lines  # Return the filtered lines
 
 
-def extract_date_from_line(line):
-    try:
-        date_str = line.split(' ')[0]
-        return datetime.strptime(date_str, '%Y-%m-%d')
-    except (IndexError, ValueError):
-        return None  # Return None if the date cannot be extracted
-
-
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     """
@@ -66,48 +61,92 @@ def upload_file():
     if end_date_str:
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
 
+    # Check if a new file was uploaded in a POST request
     if request.method == 'POST':
-        # Check if a new file was uploaded
         if 'file' in request.files and request.files['file'].filename != '':
             file = request.files['file']
             if file and allowed_file(file.filename):  # Valid file
                 filename = secure_filename(file.filename)
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-                # Store the filename in the session
+                # Store the file path in the session instead of the DataFrame
                 session['uploaded_file'] = filename
 
-        # Retrieve the uploaded file from the session
-        filename = session.get('uploaded_file')
-        if not filename:
-            return redirect(request.url)
+        # Redirect to the paginated table, starting at page 1, with filters applied
+        return redirect(url_for('show_table', page=1, filter=filters))
 
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    # If a GET request, render the initial upload page
+    return render_template('index.html',
+                           filtered_df=None,
+                           selected_filters=filters,
+                           start_date=start_date_str,
+                           end_date=end_date_str,
+                           current_page=1,  # Default value
+                           total_pages=1)  # Default value
 
-        # Filter content without fully loading the file into memory
-        filtered_lines = []
-        with open(file_path, 'r') as f:
-            for i, line in enumerate(f, 1):  # Process each line in the file
-                log_date = extract_date_from_line(line)
 
-                if start_date and log_date and log_date < start_date:
-                    continue
-                if end_date and log_date and log_date > end_date:
-                    continue
+@app.route('/table/<int:page>', methods=['GET', 'POST'])
+def show_table(page):
+    """
+    Paginate the filtered DataFrame and show the corresponding rows.
+    """
+    # Retrieve the file path from the session
+    filename = session.get('uploaded_file')
+    if not filename or not os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
+        return redirect(url_for('upload_file'))  # Redirect if file not found
 
-                # Apply filters
-                if any(f in line.lower() for f in filters):
-                    filtered_lines.append((i, line.strip()))
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-        # Convert filtered lines to DataFrame
-        filtered_df = pd.DataFrame(filtered_lines, columns=['Line Number', 'Line Content'])
+    # Get the filters from the form submission if POST, else from query parameters (URL)
+    if request.method == 'POST':
+        filters = request.form.getlist('filter')
+        # Redirect to the first page with the selected filters
+        return redirect(url_for('show_table', page=1, filter=filters))
+    else:
+        filters = request.args.getlist('filter')
 
-        # Render the template with the filtered DataFrame
-        return render_template('index.html', filtered_df=filtered_df.to_html(classes='table'), selected_filters=filters, start_date=start_date_str, end_date=end_date_str)
+    # Handle the case when no filters are selected
+    if not filters:
+        filters = []  # Do not apply any filters if nothing is selected
 
-    # Handle GET request or no file uploaded yet
-    return render_template('index.html', filtered_df=None, selected_filters=[], start_date=start_date_str, end_date=end_date_str)
+    filtered_lines = []
+    with open(file_path, 'r') as f:
+        for i, line in enumerate(f, 1):  # Process each line in the file
+            if not filters or any(f in line.lower() for f in filters):  # Apply filters or show all lines if no filters
+                filtered_lines.append([i] + line.strip().split())
+
+    # Handle empty filtered_lines
+    if not filtered_lines:
+        return render_template('index.html',
+                               filtered_df="No data available",
+                               current_page=page,
+                               total_pages=1,
+                               selected_filters=filters)
+
+    # Determine the number of columns needed based on the longest line
+    max_columns = max(len(line) for line in filtered_lines) if filtered_lines else 1
+
+    # Continue with the rest of the logic to create the DataFrame and paginate
+    columns = ['Line Number'] + [f'Column {i}' for i in range(1, max_columns)]
+    filtered_df = pd.DataFrame(filtered_lines, columns=columns)
+
+    # Pagination logic
+    start_row = (page - 1) * PER_PAGE
+    end_row = start_row + PER_PAGE
+    page_df = filtered_df.iloc[start_row:end_row]
+
+    # Calculate total pages
+    total_pages = (len(filtered_df) // PER_PAGE) + (1 if len(filtered_df) % PER_PAGE > 0 else 0)
+
+    # Render paginated table and include filters in the URL
+    return render_template('index.html',
+                           table=page_df.to_html(classes='table'),
+                           current_page=page,
+                           total_pages=total_pages,
+                           selected_filters=filters,
+                           start_date=None,
+                           end_date=None)  # Start date and end date are None for now
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=50001)

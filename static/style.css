@@ -17,19 +17,19 @@ body {
 }
 
 .sidebar {
-    width: 300px;
+    width: 575px; /* Adjusted width for more space */
     padding: 20px;
     background-color: #f8f9fa;
     border-right: 1px solid #ddd;
     box-sizing: border-box;
-    overflow-y: auto;  /* Enables scrolling for the sidebar */
-    max-height: 100vh;  /* Ensures sidebar height doesn't exceed viewport */
+    overflow-y: auto; /* Enables scrolling for the sidebar */
+    max-height: 100vh; /* Ensures sidebar height doesn't exceed viewport */
 }
 
 .content {
     flex-grow: 1;
     padding: 20px;
-    overflow-y: auto;  /* Enables scrolling for the content area */
+    overflow-y: auto; /* Enables scrolling for the content area */
     box-sizing: border-box;
     white-space: nowrap;
 }
@@ -57,11 +57,72 @@ ul {
 }
 
 .output {
-    max-height: calc(100vh - 40px);  /* Ensures output area height is responsive */
-    overflow-y: auto;  /* Enables scrolling for output area */
+    max-height: calc(100vh - 40px); /* Ensures output area height is responsive */
+    overflow-y: auto; /* Enables scrolling for output area */
     padding-right: 10px;
 }
 
 .output ul li {
     margin-bottom: 10px;
+}
+
+/* Pagination Controls in Sidebar */
+.pagination {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Adds space between the buttons */
+    margin-top: 20px;
+}
+
+.pagination .btn {
+    padding: 10px;
+    text-decoration: none;
+    color: #007bff;
+    border: 1px solid #ddd;
+    text-align: center;
+    margin: 5px 0;
+    display: inline-block;
+}
+
+.pagination .btn:hover {
+    background-color: #f0f0f0;
+}
+
+.pagination .btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+
+/* Basic table styling */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 8px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+th {
+    cursor: pointer; /* Add cursor pointer to headers to show interactivity */
+    transition: width 0.3s ease, font-size 0.3s ease; /* Smooth shrinking transition */
+}
+
+.hidden-column {
+    color: transparent; /* Make the content in cells invisible */
+    transition: color 0.3s ease;
+}
+
+.collapsed-header {
+    width: 20px; /* Shrink the header width */
+    font-size: 0.7em; /* Reduce the font size of the header */
+    overflow: hidden; /* Ensure text doesn't overflow */
+    white-space: nowrap; /* Prevent header from wrapping */
+    text-overflow: ellipsis; /* Show ellipsis for hidden text */
+    background-color: #f0f0f0;
+    color: #999;
 }
