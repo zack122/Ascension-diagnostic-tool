@@ -2,7 +2,9 @@ import os
 import pandas as pd
 from flask import Flask, request, render_template, redirect, session, url_for
 from werkzeug.utils import secure_filename
-from datetime import datetime
+from datetime import datetime, timedelta
+import re
+
 
 
 # Initialize the Flask application
@@ -85,6 +87,8 @@ def upload_file():
                            total_pages=1)  # Default value
 
 
+
+
 @app.route('/table/<int:page>', methods=['GET', 'POST'])
 def show_table(page):
     """
@@ -146,6 +150,8 @@ def show_table(page):
                            selected_filters=filters,
                            start_date=None,
                            end_date=None)  # Start date and end date are None for now
+
+
 
 
 if __name__ == '__main__':
