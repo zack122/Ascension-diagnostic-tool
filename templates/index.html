@@ -127,13 +127,25 @@
         const table = document.querySelector('table'); // Target the table
         const headers = table.querySelectorAll('th'); // Select all table headers
         const restoreButtonsContainer = document.getElementById('restore-buttons'); // Container for restore buttons
-        const hiddenColumns = new Set(); // Track hidden columns
+        const HIDDEN_COLUMNS_KEY = 'hiddenColumns'; // Key for storing hidden columns in localStorage
+
+        // Load hidden columns from localStorage
+        const hiddenColumns = new Set(JSON.parse(localStorage.getItem(HIDDEN_COLUMNS_KEY) || '[]'));
+        hiddenColumns.forEach(index => hideColumn(index, headers[index])); // Hide saved columns on page load
 
         headers.forEach((header, index) => {
             header.addEventListener('click', function() {
-                hideColumn(index, header); // Hide the column and add restore button
+                toggleColumn(index, header); // Toggle the column on header click
             });
         });
+
+        function toggleColumn(index, header) {
+            if (hiddenColumns.has(index)) {
+                restoreColumn(index, header); // Restore column if it's hidden
+            } else {
+                hideColumn(index, header); // Hide column if it's visible
+            }
+        }
 
         function hideColumn(index, header) {
             const rows = table.querySelectorAll('tr'); // Get all rows
@@ -148,6 +160,7 @@
 
             // Add the column index to the set of hidden columns
             hiddenColumns.add(index);
+            localStorage.setItem(HIDDEN_COLUMNS_KEY, JSON.stringify(Array.from(hiddenColumns))); // Update localStorage
 
             // Create a restore button for this column if not already added
             if (!document.getElementById(`restore-btn-${index}`)) {
@@ -155,12 +168,12 @@
                 button.innerText = `Show ${header.innerText}`;
                 button.id = `restore-btn-${index}`;
                 button.style.marginRight = '5px';
-                button.addEventListener('click', () => restoreColumn(index, button, header));
+                button.addEventListener('click', () => restoreColumn(index, header));
                 restoreButtonsContainer.appendChild(button);
             }
         }
 
-        function restoreColumn(index, button, header) {
+        function restoreColumn(index, header) {
             const rows = table.querySelectorAll('tr'); // Get all rows
 
             // Show all cells in the selected column, including the header
@@ -173,9 +186,11 @@
 
             // Remove the column index from the set of hidden columns
             hiddenColumns.delete(index);
+            localStorage.setItem(HIDDEN_COLUMNS_KEY, JSON.stringify(Array.from(hiddenColumns))); // Update localStorage
 
             // Remove the restore button from the container
-            restoreButtonsContainer.removeChild(button);
+            const button = document.getElementById(`restore-btn-${index}`);
+            if (button) restoreButtonsContainer.removeChild(button);
         }
     });
 </script>
