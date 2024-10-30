@@ -68,8 +68,7 @@
 
                <!-- Time shift input -->
                <label for="time_shift">Time Shift (hours):</label>
-               <input type="number" name="time_shift" id="time_shift" step="1" value="0"><br>
-
+               <input type="number" name="time_shift" value="{{ time_shift|default(0) }}" placeholder="Time shift (hours)">
 
                <button type="submit">Apply Filters</button>
            </form>
@@ -109,7 +108,9 @@
 
        <!-- Content Area to Display Filtered Table -->
        <div class="content">
-           <h2>Filtered Content:</h2>
+           <h2>Filtered Content:</h2> 
+                     <!-- Buttons to restore hidden columns -->
+           <div id="restore-buttons" style="margin-top: 20px;"></div>
            <div class="output">
                {% if table %}
                    {{ table | safe }}
@@ -117,37 +118,66 @@
                    <p>No data to display. Upload a file and apply filters to view the content.</p>
                {% endif %}
            </div>
+
        </div>
    </div>
 
    <script>
-       // This script allows collapsing and expanding columns
-       document.addEventListener('DOMContentLoaded', function() {
-           const table = document.querySelector('table'); // Target the table
-           const headers = table.querySelectorAll('th'); // Select all table headers
+    document.addEventListener('DOMContentLoaded', function() {
+        const table = document.querySelector('table'); // Target the table
+        const headers = table.querySelectorAll('th'); // Select all table headers
+        const restoreButtonsContainer = document.getElementById('restore-buttons'); // Container for restore buttons
+        const hiddenColumns = new Set(); // Track hidden columns
 
-           headers.forEach((header, index) => {
-               header.addEventListener('click', function() {
-                   toggleColumn(index, header); // Toggle the column and pass the header
-               });
-           });
+        headers.forEach((header, index) => {
+            header.addEventListener('click', function() {
+                hideColumn(index, header); // Hide the column and add restore button
+            });
+        });
 
-           function toggleColumn(index, header) {
-               const rows = table.querySelectorAll('tr'); // Get all rows
-               rows.forEach(row => {
-                   const cells = row.querySelectorAll('th, td'); // Get both headers and data cells
-                   if (cells[index]) {
-                       // Toggle visibility only for data cells (td), not headers (th)
-                       if (row !== table.querySelector('tr')) { 
-                           cells[index].classList.toggle('hidden-column');
-                       }
-                   }
-               });
+        function hideColumn(index, header) {
+            const rows = table.querySelectorAll('tr'); // Get all rows
 
-               // Toggle collapsed state for the header itself
-               header.classList.toggle('collapsed-header');
-           }
-       });
-   </script>
+            // Hide all cells in the selected column, including the header
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('th, td'); // Get both headers and data cells
+                if (cells[index]) {
+                    cells[index].style.display = 'none'; // Hide the cell
+                }
+            });
+
+            // Add the column index to the set of hidden columns
+            hiddenColumns.add(index);
+
+            // Create a restore button for this column if not already added
+            if (!document.getElementById(`restore-btn-${index}`)) {
+                const button = document.createElement('button');
+                button.innerText = `Show ${header.innerText}`;
+                button.id = `restore-btn-${index}`;
+                button.style.marginRight = '5px';
+                button.addEventListener('click', () => restoreColumn(index, button, header));
+                restoreButtonsContainer.appendChild(button);
+            }
+        }
+
+        function restoreColumn(index, button, header) {
+            const rows = table.querySelectorAll('tr'); // Get all rows
+
+            // Show all cells in the selected column, including the header
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('th, td');
+                if (cells[index]) {
+                    cells[index].style.display = ''; // Reset display to default
+                }
+            });
+
+            // Remove the column index from the set of hidden columns
+            hiddenColumns.delete(index);
+
+            // Remove the restore button from the container
+            restoreButtonsContainer.removeChild(button);
+        }
+    });
+</script>
 </body>
 </html>
