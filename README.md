@@ -9,7 +9,6 @@ The Ascension Diagnostic Tool is a Python Flask web application developed for Oc
 - [Installation](#installation)
 - [Usage](#usage)
 - [Application Structure](#application-structure)
-- [Contributing](#contributing)
 - [License](#license)
 - [Contact](#contact)
 
@@ -104,31 +103,6 @@ The Ascension Diagnostic Tool is a Python Flask web application developed for Oc
 - **`static/style.css`**: CSS file for styling the web interface.
 - **`uploads/`**: Directory where uploaded log files are stored.
 
-## Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. **Fork the Repository**
-
-2. **Create a Feature Branch**
-
-   ```bash
-   git checkout -b feature/YourFeature
-   ```
-
-3. **Commit Your Changes**
-
-   ```bash
-   git commit -m "Add YourFeature"
-   ```
-
-4. **Push to the Branch**
-
-   ```bash
-   git push origin feature/YourFeature
-   ```
-
-5. **Open a Pull Request**
 
 ## License
 
