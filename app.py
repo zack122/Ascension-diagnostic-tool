@@ -5,8 +5,6 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 import re
 
-
-
 # Initialize the Flask application
 app = Flask(__name__)
 
@@ -32,28 +30,62 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 
-def filter_content(lines, filters):
+def adjust_timestamp(line, time_shift_hours):
     """
-    Filter the content of the file based on the selected filters.
-    Returns a list of tuples, each containing a line number and the corresponding line.
+    Adjusts the timestamp in a log line by the specified number of hours.
     """
-    filtered_lines = []  # Initialize an empty list to store the filtered lines
-    for i, line in enumerate(lines, 1):  # Enumerate the lines with line numbers starting from 1
-        # Check if the line matches any of the selected filters
-        if any(f in line.lower() for f in filters):
-            filtered_lines.append((i, line.strip()))  # Append the line number and line content to the list
-    return filtered_lines  # Return the filtered lines
+    timestamp_pattern = r'^(\d{4}-\d{2}-\d{2}) \((\d{2}:\d{2}:\d{2})\):(.*)'
+    match = re.match(timestamp_pattern, line)
+    if match:
+        date_str = match.group(1)
+        time_str = match.group(2)
+        rest_of_line = match.group(3)
+        timestamp_str = f"{date_str} {time_str}"
+        try:
+            timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+            # Adjust the timestamp
+            adjusted_timestamp = timestamp + timedelta(hours=time_shift_hours)
+            # Format the adjusted timestamp back to string
+            adjusted_date_str = adjusted_timestamp.strftime('%Y-%m-%d')
+            adjusted_time_str = adjusted_timestamp.strftime('%H:%M:%S')
+            # Reconstruct the line with adjusted timestamp
+            adjusted_line = f"{adjusted_date_str} ({adjusted_time_str}):{rest_of_line}"
+            return adjusted_line
+        except ValueError:
+            # If timestamp parsing fails, return the original line
+            return line
+    else:
+        # If the line doesn't match the timestamp pattern, return it as is
+        return line
+
+
+def filter_content(lines, filters, time_shift_hours):
+    """
+    Filter the content of the file based on the selected filters and adjust timestamps.
+    Returns a list of lists, each containing the line number and the corresponding line split into columns.
+    """
+    filtered_lines = []
+    for i, line in enumerate(lines, 1):
+        line_content = line.strip()
+        # Adjust the timestamp if necessary
+        if time_shift_hours != 0:
+            line_content = adjust_timestamp(line_content, time_shift_hours)
+        if not filters or any(f.lower() in line_content.lower() for f in filters):
+            # Split the line into columns
+            columns = [i] + line_content.split()
+            filtered_lines.append(columns)
+    return filtered_lines
 
 
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     """
-    Handle the main route of the application. If the request method is POST, process the uploaded file.
-    If the method is GET, render the template without any filtered content.
+    Handle the main route of the application.
     """
-    filters = request.form.getlist('filter')  # Retrieve the selected filters
-    start_date_str = request.form.get('start_date')  # Retrieve the start date
-    end_date_str = request.form.get('end_date')  # Retrieve the end date
+    filters = request.form.getlist('filter')
+    start_date_str = request.form.get('start_date')
+    end_date_str = request.form.get('end_date')
+    time_shift_str = request.form.get('time_shift', '0')
 
     start_date = None
     end_date = None
@@ -63,19 +95,28 @@ def upload_file():
     if end_date_str:
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
 
+    # Parse time_shift to integer
+    try:
+        time_shift_hours = int(time_shift_str)
+    except ValueError:
+        time_shift_hours = 0  # Default to 0 if parsing fails
+        time_shift_str = '0'
+
     # Check if a new file was uploaded in a POST request
     if request.method == 'POST':
         if 'file' in request.files and request.files['file'].filename != '':
             file = request.files['file']
             if file and allowed_file(file.filename):  # Valid file
                 filename = secure_filename(file.filename)
+                if not os.path.exists(app.config['UPLOAD_FOLDER']):
+                    os.makedirs(app.config['UPLOAD_FOLDER'])
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-                # Store the file path in the session instead of the DataFrame
+                # Store the file path in the session
                 session['uploaded_file'] = filename
 
-        # Redirect to the paginated table, starting at page 1, with filters applied
-        return redirect(url_for('show_table', page=1, filter=filters))
+        # Redirect to the paginated table, starting at page 1, with filters and time_shift applied
+        return redirect(url_for('show_table', page=1, filter=filters, time_shift=time_shift_str))
 
     # If a GET request, render the initial upload page
     return render_template('index.html',
@@ -83,10 +124,9 @@ def upload_file():
                            selected_filters=filters,
                            start_date=start_date_str,
                            end_date=end_date_str,
-                           current_page=1,  # Default value
-                           total_pages=1)  # Default value
-
-
+                           current_page=1,
+                           total_pages=1,
+                           time_shift='0')
 
 
 @app.route('/table/<int:page>', methods=['GET', 'POST'])
@@ -97,40 +137,54 @@ def show_table(page):
     # Retrieve the file path from the session
     filename = session.get('uploaded_file')
     if not filename or not os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
-        return redirect(url_for('upload_file'))  # Redirect if file not found
+        return redirect(url_for('upload_file'))
 
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-    # Get the filters from the form submission if POST, else from query parameters (URL)
+    # Get filters and time_shift from the request
     if request.method == 'POST':
         filters = request.form.getlist('filter')
-        # Redirect to the first page with the selected filters
-        return redirect(url_for('show_table', page=1, filter=filters))
+        time_shift_str = request.form.get('time_shift', '0')
+        # Redirect to the first page with the selected filters and time_shift
+        return redirect(url_for('show_table', page=1, filter=filters, time_shift=time_shift_str))
     else:
         filters = request.args.getlist('filter')
+        time_shift_str = request.args.get('time_shift', '0')
 
-    # Handle the case when no filters are selected
-    if not filters:
-        filters = []  # Do not apply any filters if nothing is selected
+    # Parse time_shift to integer
+    try:
+        time_shift_hours = int(time_shift_str)
+    except ValueError:
+        time_shift_hours = 0  # Default to 0 if parsing fails
+        time_shift_str = '0'
 
-    filtered_lines = []
+    # Handle filters
+    if "all" in filters:
+        filters = []
+
+    # Read the file and process lines
     with open(file_path, 'r') as f:
-        for i, line in enumerate(f, 1):  # Process each line in the file
-            if not filters or any(f in line.lower() for f in filters):  # Apply filters or show all lines if no filters
-                filtered_lines.append([i] + line.strip().split())
+        lines = f.readlines()
+
+    # Apply filters and adjust timestamps
+    filtered_lines = filter_content(lines, filters, time_shift_hours)
 
     # Handle empty filtered_lines
     if not filtered_lines:
         return render_template('index.html',
-                               filtered_df="No data available",
-                               current_page=page,
+                               table=None,
+                               current_page=1,
                                total_pages=1,
-                               selected_filters=filters)
+                               selected_filters=filters,
+                               time_shift=time_shift_str,
+                               start_date=None,
+                               end_date=None,
+                               message="No data available after applying time shift and filters.")
 
     # Determine the number of columns needed based on the longest line
-    max_columns = max(len(line) for line in filtered_lines) if filtered_lines else 1
+    max_columns = max(len(line) for line in filtered_lines)
 
-    # Continue with the rest of the logic to create the DataFrame and paginate
+    # Create the DataFrame and paginate
     columns = ['Line Number'] + [f'Column {i}' for i in range(1, max_columns)]
     filtered_df = pd.DataFrame(filtered_lines, columns=columns)
 
@@ -140,18 +194,17 @@ def show_table(page):
     page_df = filtered_df.iloc[start_row:end_row]
 
     # Calculate total pages
-    total_pages = (len(filtered_df) // PER_PAGE) + (1 if len(filtered_df) % PER_PAGE > 0 else 0)
+    total_pages = (len(filtered_df) + PER_PAGE - 1) // PER_PAGE
 
-    # Render paginated table and include filters in the URL
+    # Render paginated table and include filters and time_shift in the URL
     return render_template('index.html',
-                           table=page_df.to_html(classes='table'),
+                           table=page_df.to_html(classes='table', index=False, escape=False),
                            current_page=page,
                            total_pages=total_pages,
                            selected_filters=filters,
+                           time_shift=time_shift_str,
                            start_date=None,
-                           end_date=None)  # Start date and end date are None for now
-
-
+                           end_date=None)
 
 
 if __name__ == '__main__':

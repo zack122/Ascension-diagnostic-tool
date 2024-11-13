@@ -12,7 +12,7 @@
        <!-- Sidebar with Filter Options and Pagination -->
        <div class="sidebar">
            <h1>Ascension Diagnostic Tool for Log Files</h1>
-           <form method="POST" enctype="multipart/form-data">
+           <form method="POST" enctype="multipart/form-data" action="{{ url_for('show_table', page=1) }}">
                <label for="file">Choose a file (optional if already uploaded):</label>
                <input type="file" name="file" id="file" accept=".txt">
 
@@ -68,7 +68,7 @@
 
                <!-- Time shift input -->
                <label for="time_shift">Time Shift (hours):</label>
-               <input type="number" name="time_shift" value="{{ time_shift|default(0) }}" placeholder="Time shift (hours)">
+               <input type="number" name="time_shift" value="{{ time_shift|default('0') }}" placeholder="Time shift (hours)"><br>
 
                <button type="submit">Apply Filters</button>
            </form>
@@ -77,30 +77,30 @@
            <div class="pagination">
                {% if total_pages > 1 %}
                    {% if current_page > 1 %}
-                       <a href="{{ url_for('show_table', page=current_page - 1, filter=selected_filters) }}" class="btn">Previous</a>
+                       <a href="{{ url_for('show_table', page=current_page - 1, filter=selected_filters, start_date=start_date, end_date=end_date, time_shift=time_shift) }}" class="btn">Previous</a>
                    {% endif %}
 
                    {% set start_page = current_page - 4 if current_page > 5 else 1 %}
                    {% set end_page = current_page + 4 if current_page < total_pages - 5 else total_pages %}
 
                    {% if current_page > 5 %}
-                       <a href="{{ url_for('show_table', page=1, filter=selected_filters) }}" class="btn">1</a>
+                       <a href="{{ url_for('show_table', page=1, filter=selected_filters, start_date=start_date, end_date=end_date, time_shift=time_shift) }}" class="btn">1</a>
                        <span>...</span>
                    {% endif %}
 
                    {% for p in range(start_page, end_page + 1) %}
-                       <a href="{{ url_for('show_table', page=p, filter=selected_filters) }}" class="btn {% if p == current_page %}active{% endif %}">
+                       <a href="{{ url_for('show_table', page=p, filter=selected_filters, start_date=start_date, end_date=end_date, time_shift=time_shift) }}" class="btn {% if p == current_page %}active{% endif %}">
                            {{ p }}
                        </a>
                    {% endfor %}
 
                    {% if current_page < total_pages - 5 %}
                        <span>...</span>
-                       <a href="{{ url_for('show_table', page=total_pages, filter=selected_filters) }}" class="btn">{{ total_pages }}</a>
+                       <a href="{{ url_for('show_table', page=total_pages, filter=selected_filters, start_date=start_date, end_date=end_date, time_shift=time_shift) }}" class="btn">{{ total_pages }}</a>
                    {% endif %}
 
                    {% if current_page < total_pages %}
-                       <a href="{{ url_for('show_table', page=current_page + 1, filter=selected_filters) }}" class="btn">Next</a>
+                       <a href="{{ url_for('show_table', page=current_page + 1, filter=selected_filters, start_date=start_date, end_date=end_date, time_shift=time_shift) }}" class="btn">Next</a>
                    {% endif %}
                {% endif %}
            </div>
@@ -109,9 +109,12 @@
        <!-- Content Area to Display Filtered Table -->
        <div class="content">
            <h2>Filtered Content:</h2> 
-                     <!-- Buttons to restore hidden columns -->
+           <!-- Buttons to restore hidden columns -->
            <div id="restore-buttons" style="margin-top: 20px;"></div>
            <div class="output">
+               {% if message %}
+                   <p>{{ message }}</p>
+               {% endif %}
                {% if table %}
                    {{ table | safe }}
                {% else %}
@@ -125,6 +128,7 @@
    <script>
     document.addEventListener('DOMContentLoaded', function() {
         const table = document.querySelector('table'); // Target the table
+        if (!table) return; // Exit if table is not present
         const headers = table.querySelectorAll('th'); // Select all table headers
         const restoreButtonsContainer = document.getElementById('restore-buttons'); // Container for restore buttons
         const HIDDEN_COLUMNS_KEY = 'hiddenColumns'; // Key for storing hidden columns in localStorage
