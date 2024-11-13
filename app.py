@@ -70,10 +70,14 @@ def filter_content(lines, filters, time_shift_hours):
         # Adjust the timestamp if necessary
         if time_shift_hours != 0:
             line_content = adjust_timestamp(line_content, time_shift_hours)
+        # Apply filters to check if the line should be included:
+        # - If `filters` is empty, include all lines (no filtering applied).
+        # - If `filters` has keywords, check if any keyword is in the line (case-insensitive).
         if not filters or any(f.lower() in line_content.lower() for f in filters):
-            # Split the line into columns
+            # Split `line_content` into columns by whitespace and add line number at the beginning
             columns = [i] + line_content.split()
             filtered_lines.append(columns)
+    # Return the list of filtered and processed lines, each with line number and split columns
     return filtered_lines
 
 
@@ -82,6 +86,7 @@ def upload_file():
     """
     Handle the main route of the application.
     """
+    # provides access to data sent from the client (typically from an HTML form in the webpage), so the function can respond based on user inputs.
     filters = request.form.getlist('filter')
     start_date_str = request.form.get('start_date')
     end_date_str = request.form.get('end_date')
@@ -95,19 +100,13 @@ def upload_file():
     if end_date_str:
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
 
-    # Parse time_shift to integer
-    try:
-        time_shift_hours = int(time_shift_str)
-    except ValueError:
-        time_shift_hours = 0  # Default to 0 if parsing fails
-        time_shift_str = '0'
-
-    # Check if a new file was uploaded in a POST request
+    # Check if a new file was uploaded in a POST request (check if log file was uploaded)
     if request.method == 'POST':
+        # Check if the file was uploaded and is valid  
         if 'file' in request.files and request.files['file'].filename != '':
             file = request.files['file']
             if file and allowed_file(file.filename):  # Valid file
-                filename = secure_filename(file.filename)
+                filename = secure_filename(file.filename) #sanitizes the filename to remove any potentially harmful characters, ensuring it’s safe to use.
                 if not os.path.exists(app.config['UPLOAD_FOLDER']):
                     os.makedirs(app.config['UPLOAD_FOLDER'])
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
@@ -132,44 +131,57 @@ def upload_file():
 @app.route('/table/<int:page>', methods=['GET', 'POST'])
 def show_table(page):
     """
-    Paginate the filtered DataFrame and show the corresponding rows.
+    Display a paginated table of filtered data from an uploaded file.
+    This function processes filters and time shifts applied by the user,
+    reads the file, and paginates the resulting filtered data for display.
+
+    Parameters:
+        page (int): The page number for pagination.
+
+    Returns:
+        Rendered HTML page with the filtered, paginated data table.
     """
+
     # Retrieve the file path from the session
     filename = session.get('uploaded_file')
+    # If the file is not in the session or does not exist on disk, redirect to the upload page
     if not filename or not os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
         return redirect(url_for('upload_file'))
 
+    # Define the full path to the file based on the upload folder
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-    # Get filters and time_shift from the request
+    # Retrieve filters and time_shift from the request, based on POST or GET method
     if request.method == 'POST':
+        # For POST: Get filters and time shift values from the form data
         filters = request.form.getlist('filter')
         time_shift_str = request.form.get('time_shift', '0')
-        # Redirect to the first page with the selected filters and time_shift
+        # Redirect to the first page with the new filters and time shift
         return redirect(url_for('show_table', page=1, filter=filters, time_shift=time_shift_str))
     else:
+        # For GET: Retrieve filters and time shift values from the URL query parameters
         filters = request.args.getlist('filter')
         time_shift_str = request.args.get('time_shift', '0')
 
-    # Parse time_shift to integer
+    # Parse time_shift to integer; default to 0 if parsing fails
     try:
         time_shift_hours = int(time_shift_str)
     except ValueError:
-        time_shift_hours = 0  # Default to 0 if parsing fails
+        time_shift_hours = 0
         time_shift_str = '0'
 
-    # Handle filters
+    # Check if "all" is in filters and, if so, clear the filter list (no filtering)
     if "all" in filters:
         filters = []
 
-    # Read the file and process lines
+    # Read all lines from the uploaded file
     with open(file_path, 'r') as f:
         lines = f.readlines()
 
-    # Apply filters and adjust timestamps
+    # Filter and adjust timestamps for the file's lines based on user inputs
     filtered_lines = filter_content(lines, filters, time_shift_hours)
 
-    # Handle empty filtered_lines
+    # If no lines remain after filtering, render the page with a "No data available" message
     if not filtered_lines:
         return render_template('index.html',
                                table=None,
@@ -181,22 +193,23 @@ def show_table(page):
                                end_date=None,
                                message="No data available after applying time shift and filters.")
 
-    # Determine the number of columns needed based on the longest line
+    # Determine the maximum number of columns needed based on the longest line
     max_columns = max(len(line) for line in filtered_lines)
-
-    # Create the DataFrame and paginate
+    # Set column headers: 'Line Number' followed by 'Column 1', 'Column 2', etc.
     columns = ['Line Number'] + [f'Column {i}' for i in range(1, max_columns)]
+    # Create a DataFrame with the filtered lines and the defined columns
     filtered_df = pd.DataFrame(filtered_lines, columns=columns)
 
-    # Pagination logic
+    # Define pagination range: calculate start and end rows for the current page
     start_row = (page - 1) * PER_PAGE
     end_row = start_row + PER_PAGE
+    # Select rows for the current page from the DataFrame
     page_df = filtered_df.iloc[start_row:end_row]
 
-    # Calculate total pages
+    # Calculate total pages based on the number of rows in the filtered DataFrame
     total_pages = (len(filtered_df) + PER_PAGE - 1) // PER_PAGE
 
-    # Render paginated table and include filters and time_shift in the URL
+    # Render the HTML template with the paginated table and related information
     return render_template('index.html',
                            table=page_df.to_html(classes='table', index=False, escape=False),
                            current_page=page,
