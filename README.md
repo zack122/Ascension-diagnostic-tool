@@ -14,7 +14,7 @@ The Ascension Diagnostic Tool is a Python Flask web application developed for Oc
 
 ## Features
 
-- **File Upload**: Upload log files in `.txt` format up to 10 GB in size.
+- **File Upload**: Upload log files in `.txt` format 
 - **Keyword Filtering**: Filter log entries based on predefined keywords:
   - `system`
   - `data`
