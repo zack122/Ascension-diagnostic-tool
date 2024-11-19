@@ -76,12 +76,11 @@ The Ascension Diagnostic Tool is a Python Flask web application developed for Oc
 
 2. **Access the Web Interface**
 
-   Open your web browser and navigate to `http://localhost:50001`.
+   Open your web browser and navigate to `http://localhost:50000`.
 
 3. **Upload a Log File**
 
    - Click on the file input field and select a `.txt` log file to upload.
-   - The file size should not exceed 10 GB.
 
 4. **Apply Filters**
 
