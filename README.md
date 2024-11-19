@@ -72,7 +72,7 @@ The Ascension Diagnostic Tool is a Python Flask web application developed for Oc
    python app.py
    ```
 
-   The application will start on `http://localhost:50001` by default.
+   The application will start on `http://localhost:50000` by default.
 
 2. **Access the Web Interface**
 
