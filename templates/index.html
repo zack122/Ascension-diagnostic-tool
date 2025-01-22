@@ -5,17 +5,32 @@
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>File Filter and Paginated Table</title>
    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
+   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='icon/favicon.ico') }}">
+   <meta name="theme-color" content="#007bff">
 </head>
 <body>
    <div class="container">
        <!-- Sidebar with Filter Options and Pagination -->
        <div class="sidebar">
            <h1>Ascension Diagnostic Tool for Log Files</h1>
-           <form method="POST" enctype="multipart/form-data" action="{{ url_for('show_table', page=1) }}">
-               <label for="file">Choose a file (optional if already uploaded):</label>
-               <input type="file" name="file" id="file" accept=".txt">
 
+           <!-- File Upload Section -->
+           {% if uploaded_file %}
+               <p>Uploaded file: {{ uploaded_file }}</p>
+               <form method="POST" action="{{ url_for('upload_file') }}">
+                   <button type="submit" name="action" value="clear_file">Clear File</button>
+               </form>
+           {% else %}
+               <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_file') }}">
+                   <label for="file">Choose a file:</label>
+                   <input type="file" name="file" id="file" accept=".txt">
+                   <button type="submit">Upload File</button>
+               </form>
+           {% endif %}
+
+           <!-- Filters Form -->
+           <form method="GET" action="{{ url_for('show_table', page=1) }}">
                <label>Choose filters:</label><br>
 
                <!-- Filters options as checkboxes -->
@@ -25,46 +40,50 @@
 
                <input type="checkbox" name="filter" value="system" id="filter-system"
                {% if 'system' in selected_filters %}checked{% endif %}>
-               <label for="filter-system">System Logs</label><br>
+               <label for="filter-system">System</label><br>
 
                <input type="checkbox" name="filter" value="data" id="filter-data"
                {% if 'data' in selected_filters %}checked{% endif %}>
-               <label for="filter-data">Data Logs</label><br>
+               <label for="filter-data">Data</label><br>
 
                <input type="checkbox" name="filter" value="debug" id="filter-debug"
                {% if 'debug' in selected_filters %}checked{% endif %}>
-               <label for="filter-debug">Debug Logs</label><br>
+               <label for="filter-debug">Debug</label><br>
 
                <input type="checkbox" name="filter" value="notification" id="filter-notification"
                {% if 'notification' in selected_filters %}checked{% endif %}>
-               <label for="filter-notification">Notification Logs</label><br>
+               <label for="filter-notification">Notification</label><br>
 
                <input type="checkbox" name="filter" value="warning" id="filter-warning"
                {% if 'warning' in selected_filters %}checked{% endif %}>
-               <label for="filter-warning">Warning Logs</label><br>
+               <label for="filter-warning">Warning</label><br>
 
                <input type="checkbox" name="filter" value="error" id="filter-error"
-               {% if 'error' in selected_filters %}checked{% endif %}>
-               <label for="filter-error">Error Logs</label><br>
+               {% if '[error]' in selected_filters %}checked{% endif %}>
+               <label for="filter-error">Error</label><br>
 
                <input type="checkbox" name="filter" value="kernel" id="filter-kernel"
                {% if 'kernel' in selected_filters %}checked{% endif %}>
-               <label for="filter-kernel">Kernel Logs</label><br>
+               <label for="filter-kernel">Kernel</label><br>
 
                <input type="checkbox" name="filter" value="tx" id="filter-tx"
                {% if 'tx' in selected_filters %}checked{% endif %}>
-               <label for="filter-tx">Tx Logs</label><br>
+               <label for="filter-tx">Tx</label><br>
 
                <input type="checkbox" name="filter" value="rx" id="filter-rx"
                {% if 'rx' in selected_filters %}checked{% endif %}>
-               <label for="filter-rx">Rx Logs</label><br>
+               <label for="filter-rx">Rx</label><br>
 
                <!-- Date filter fields -->
                <label for="start_date">Start Date:</label>
-               <input type="date" name="start_date" id="start_date" value="{{ start_date }}"><br>
+               <input type="date" name="start_date" id="start_date" value="{{ start_date }}"
+               {% if min_date %} min="{{ min_date }}"{% endif %}
+               {% if max_date %} max="{{ max_date }}"{% endif %}><br>
 
                <label for="end_date">End Date:</label>
-               <input type="date" name="end_date" id="end_date" value="{{ end_date }}"><br>
+               <input type="date" name="end_date" id="end_date" value="{{ end_date }}"
+               {% if min_date %} min="{{ min_date }}"{% endif %}
+               {% if max_date %} max="{{ max_date }}"{% endif %}><br>
 
                <!-- Time shift input -->
                <label for="time_shift">Time Shift (hours):</label>
@@ -108,7 +127,7 @@
 
        <!-- Content Area to Display Filtered Table -->
        <div class="content">
-           <h2>Filtered Content:</h2> 
+           <h2>Filtered Content:</h2>
            <!-- Buttons to restore hidden columns -->
            <div id="restore-buttons" style="margin-top: 20px;"></div>
            <div class="output">
@@ -197,6 +216,16 @@
             if (button) restoreButtonsContainer.removeChild(button);
         }
     });
-</script>
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/static/service-worker.js').then(function(registration) {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            }, function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+    }
+    </script>
 </body>
 </html>
